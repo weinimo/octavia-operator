@@ -1,5 +1,5 @@
 ARG GOLANG_BUILDER=registry.access.redhat.com/ubi9/go-toolset:1.20
-ARG OPERATOR_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:latest
+ARG OPERATOR_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
 
 # Build the manager binary
 FROM $GOLANG_BUILDER AS builder
@@ -36,10 +36,10 @@ ARG DEST_ROOT=/dest-root
 # NONROOT default id https://github.com/GoogleContainerTools/distroless/blob/main/base/base.bzl#L8=
 ARG USER_ID=65532
 
-ARG IMAGE_COMPONENT="octavia-operator-container"
-ARG IMAGE_NAME="octavia-operator"
+ARG IMAGE_COMPONENT="octavia-operator-containerdbg"
+ARG IMAGE_NAME="octavia-operatordbg"
 ARG IMAGE_VERSION="1.0.0"
-ARG IMAGE_SUMMARY="Octavia Operator"
+ARG IMAGE_SUMMARY="Octavia Operatordbg"
 ARG IMAGE_DESC="This image includes the octavia-operator"
 ARG IMAGE_TAGS="cn-openstack openstack"
 
@@ -61,8 +61,8 @@ ENV USER_UID=$USER_ID \
 	OPERATOR_TEMPLATES=/usr/share/octavia-operator/templates/
 WORKDIR /
 
-# Install operator binary to WORKDIR
 COPY --from=builder ${DEST_ROOT}/manager .
+# Install operator binary to WORKDIR
 
 # Install templates
 COPY --from=builder ${DEST_ROOT}/templates ${OPERATOR_TEMPLATES}
@@ -71,4 +71,16 @@ USER $USER_ID
 
 ENV PATH="/:${PATH}"
 
-ENTRYPOINT ["/manager"]
+USER root
+ADD https://golang.org/dl/go1.21.13.linux-amd64.tar.gz /dbg/
+ADD https://raw.githubusercontent.com/openstack-k8s-operators/octavia-operator/d82b58f053178c2d429f3fcc554d4a6f2086c5c8/tests/functional/octavia_controller_test.go /dbg/
+WORKDIR /dbg
+RUN dnf install -y git make && \
+    tar -xaf go1.21.13.linux-amd64.tar.gz && \
+    git clone https://github.com/openstack-k8s-operators/octavia-operator && \
+    mv -f octavia_controller_test.go octavia-operator/tests/functional/
+ENV PATH="$PATH:/dbg/go/bin"
+
+WORKDIR /dbg/octavia-operator
+
+ENTRYPOINT ["bash"]
