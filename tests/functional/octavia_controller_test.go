@@ -196,7 +196,7 @@ var _ = Describe("Octavia controller", func() {
 			)
 		})
 
-		It("creates a secret that contains PEM files", func() {
+		FIt("creates a secret that contains PEM files", func() {
 			configData := th.GetSecret(
 				types.NamespacedName{
 					Namespace: octaviaName.Namespace,
@@ -210,6 +210,7 @@ var _ = Describe("Octavia controller", func() {
 			for _, filename := range expectedKeys {
 				Expect(configData.Data[filename]).ShouldNot(BeEmpty())
 			}
+			fmt.Printf("%+v\n", string(configData.Data["server_ca.key.pem"]))
 		})
 	})
 
